@@ -4,17 +4,23 @@ from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, ContextTypes
 )
-from backend.config import TELEGRAM_BOT_TOKEN
+from backend.config import TELEGRAM_BOT_TOKEN, ADMIN_USER_ID
 from backend.database import (
     add_to_queue, count_user_active_requests, get_pending_queue, 
-    get_current_playing, get_setting
+    get_current_playing, get_setting, delete_queue_item
 )
+from backend.radio.player_engine import radio_engine
 from backend.radio.downloader import quick_search
 
 logger = logging.getLogger(__name__)
 
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user.first_name
+    chat_id = str(update.effective_chat.id)
+    is_admin = (ADMIN_USER_ID and chat_id == str(ADMIN_USER_ID))
+
+    admin_extra = "\n👑 **Modo Administrador Activo:**\n• `/saltar` — Saltar pista o locutor actual\n• `/limpiar` — Vaciar cola de espera\n" if is_admin else ""
+
     await update.message.reply_text(
         f"👋 ¡Hola {user}! Bienvenido a la cabina de **Radio FM** 📻✨\n\n"
         "Aquí puedes pedir tu música favorita para que suene al aire en la radio web.\n\n"
@@ -24,7 +30,8 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📋 **Comandos útiles:**\n"
         "• `/cola` — Ver canciones en espera y turnos\n"
         "• `/mipedido` — Estado de tu turno actual\n"
-        "• `/ayuda` — Instrucciones de uso",
+        "• `/ayuda` — Instrucciones de uso\n"
+        f"{admin_extra}",
         parse_mode="Markdown"
     )
 
@@ -150,6 +157,24 @@ async def handle_song_request(update: Update, context: ContextTypes.DEFAULT_TYPE
             "❌ No pudimos encontrar esa canción. Intenta ser más específico con el nombre del artista y título."
         )
 
+async def saltar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    if ADMIN_USER_ID and chat_id != str(ADMIN_USER_ID):
+        await update.message.reply_text("⛔ Este comando es exclusivo para el administrador de la radio.")
+        return
+    radio_engine.request_skip()
+    await update.message.reply_text("⏭️ **Comando recibido:** Saltando a la siguiente pista o locutor.", parse_mode="Markdown")
+
+async def limpiar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    if ADMIN_USER_ID and chat_id != str(ADMIN_USER_ID):
+        await update.message.reply_text("⛔ Este comando es exclusivo para el administrador de la radio.")
+        return
+    pending = await get_pending_queue()
+    for item in pending:
+        await delete_queue_item(item["id"])
+    await update.message.reply_text(f"🗑️ Se han eliminado {len(pending)} canciones de la cola.")
+
 def setup_bot_application() -> Application | None:
     if not TELEGRAM_BOT_TOKEN:
         print("ℹ️ Telegram Bot Token no configurado aún. El bot se iniciará cuando se ingrese en el .env o Panel Admin.")
@@ -160,6 +185,8 @@ def setup_bot_application() -> Application | None:
     app.add_handler(CommandHandler("ayuda", help_cmd))
     app.add_handler(CommandHandler("cola", cola_cmd))
     app.add_handler(CommandHandler("mipedido", mipedido_cmd))
+    app.add_handler(CommandHandler("saltar", saltar_cmd))
+    app.add_handler(CommandHandler("limpiar", limpiar_cmd))
     app.add_handler(CommandHandler("pedir", handle_song_request))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_song_request))
 

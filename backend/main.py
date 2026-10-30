@@ -41,10 +41,15 @@ async def lifespan(app: FastAPI):
     bot_app = setup_bot_application()
     bot_task = None
     if bot_app:
-        await bot_app.initialize()
-        await bot_app.start()
-        bot_task = asyncio.create_task(bot_app.updater.start_polling())
-        print("🤖 Bot de Telegram en línea y escuchando pedidos.")
+        async def run_bot():
+            try:
+                await bot_app.initialize()
+                await bot_app.start()
+                await bot_app.updater.start_polling(drop_pending_updates=True)
+                print("🤖 Bot de Telegram (@UniRFMbot) en línea y escuchando pedidos.")
+            except Exception as e:
+                print(f"⚠️ Error inicializando bot de Telegram: {e}")
+        bot_task = asyncio.create_task(run_bot())
 
     yield
 
@@ -52,9 +57,13 @@ async def lifespan(app: FastAPI):
     radio_engine.is_running = False
     engine_task.cancel()
     if bot_app:
-        await bot_app.updater.stop()
-        await bot_app.stop()
-        await bot_app.shutdown()
+        try:
+            if bot_app.updater and bot_app.updater.running:
+                await bot_app.updater.stop()
+            await bot_app.stop()
+            await bot_app.shutdown()
+        except Exception:
+            pass
 
 app = FastAPI(title="Radio FM IA", lifespan=lifespan)
 
