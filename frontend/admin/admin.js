@@ -166,6 +166,25 @@ async function deleteTrack(trackId) {
 }
 
 // ====== PROVIDERS MANAGEMENT ======
+function onProviderTypeChange() {
+  const type = document.getElementById('newProvType').value;
+  const modelInput = document.getElementById('newProvModel');
+  const nameInput = document.getElementById('newProvName');
+  if (type === 'groq') {
+    modelInput.value = 'llama-3.3-70b-versatile';
+    nameInput.value = 'Groq Llama 3.3';
+  } else if (type === 'gemini') {
+    modelInput.value = 'gemini-2.0-flash';
+    nameInput.value = 'Google Gemini Flash';
+  } else if (type === 'cerebras') {
+    modelInput.value = 'llama-3.3-70b';
+    nameInput.value = 'Cerebras AI';
+  } else if (type === 'openrouter') {
+    modelInput.value = 'meta-llama/llama-3.3-70b-instruct:free';
+    nameInput.value = 'OpenRouter Free';
+  }
+}
+
 async function loadProviders() {
   try {
     const res = await fetch('/api/providers');
@@ -178,14 +197,17 @@ async function loadProviders() {
     }
 
     container.innerHTML = list.map((p, idx) => `
-      <div class="provider-item">
+      <div class="provider-item" style="border: 1px solid rgba(0,0,0,0.08); padding: 16px 20px;">
         <div>
-          <div style="font-weight:700; font-size:14px;">${escapeHtml(p.name)} <span style="font-weight:400; font-size:12px; color:#777;">(${p.model_name})</span></div>
-          <div style="font-size:11px; color:#888;">Prioridad ${idx + 1} · Tipo: ${p.provider_type.toUpperCase()}</div>
+          <div style="font-weight:700; font-size:15px; display:flex; align-items:center; gap:8px;">
+            ${escapeHtml(p.name)} 
+            <span style="font-weight:500; font-size:12px; color:#666; background:rgba(0,0,0,0.05); padding:2px 8px; border-radius:4px;">${p.model_name}</span>
+          </div>
+          <div style="font-size:12px; color:#888; margin-top:4px;">Prioridad #${idx + 1} · Proveedor: <strong>${p.provider_type.toUpperCase()}</strong></div>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span class="prov-badge">${p.is_active ? 'ACTIVO' : 'PAUSADO'}</span>
-          <button class="btn-action" style="padding:4px 8px; font-size:11px; color:#c00;" onclick="removeProvider(${p.id})">Eliminar</button>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="prov-badge">${p.is_active ? '● ACTIVO' : 'PAUSADO'}</span>
+          <button class="btn-action" style="padding:6px 12px; font-size:12px; background:#ffeef0; color:#cf222e; border:1px solid rgba(207,34,46,0.2);" onclick="removeProvider(${p.id})">🗑️ Eliminar</button>
         </div>
       </div>
     `).join('');

@@ -181,6 +181,10 @@
           El sistema intentará generar el comentario con el primer proveedor activo. Si se satura o supera límites (HTTP 429), saltará automáticamente al de respaldo.
         </p>
 
+        <div style="margin-bottom: 20px; padding: 14px 18px; background: rgba(0, 112, 243, 0.08); border: 1px solid rgba(0, 112, 243, 0.2); border-radius: 12px; font-size: 13px; color: #004499; line-height: 1.5;">
+          <strong>🔒 Guardado Permanente en la Nube:</strong> Las APIs que registres aquí se guardan de inmediato. Si deseas que tus claves se mantengan fijas para siempre en Render incluso tras actualizar el código, también puedes añadirlas como variables en Render (<code>GROQ_API_KEY</code>, <code>GEMINI_API_KEY</code>, <code>CEREBRAS_API_KEY</code>, <code>OPENROUTER_API_KEY</code>) y el sistema las auto-detectará.
+        </div>
+
         <div id="providersList"></div>
 
         <!-- Add provider form -->
@@ -189,12 +193,12 @@
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Nombre del Proveedor</label>
-              <input type="text" id="newProvName" class="glass-input" placeholder="Ej: Groq Primaria">
+              <input type="text" id="newProvName" class="glass-input" value="Groq Llama 3.3">
             </div>
             <div class="form-group">
               <label class="form-label">Tipo de Proveedor</label>
-              <select id="newProvType" class="glass-select">
-                <option value="groq">Groq (Llama 3.3 Gratis - Ultra Rápido)</option>
+              <select id="newProvType" class="glass-select" onchange="onProviderTypeChange()">
+                <option value="groq" selected>Groq (Llama 3.3 Gratis - Ultra Rápido)</option>
                 <option value="gemini">Google AI Studio (Gemini Flash Gratis)</option>
                 <option value="cerebras">Cerebras (Llama 3.3 Developer)</option>
                 <option value="openrouter">OpenRouter (Modelos Libres)</option>
