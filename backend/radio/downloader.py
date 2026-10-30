@@ -15,11 +15,17 @@ def get_base_ydl_opts():
         'match_filter': yt_dlp.utils.match_filter_func("!is_live & duration < 900"),
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'mweb', 'web']
+                'player_client': ['android', 'ios', 'tv_embedded']
             }
         }
     }
     cookie_file = BASE_DIR / "cookies.txt"
+    if not cookie_file.exists() and os.getenv("YOUTUBE_COOKIES"):
+        try:
+            with open(cookie_file, "w") as f:
+                f.write(os.getenv("YOUTUBE_COOKIES"))
+        except Exception:
+            pass
     if cookie_file.exists():
         opts['cookiefile'] = str(cookie_file)
     return opts

@@ -1,9 +1,9 @@
 # Imagen base ligera con Python 3.12 y soporte para FFmpeg
 FROM python:3.12-slim
 
-# Instalar FFmpeg y dependencias del sistema
+# Instalar FFmpeg, Node.js y dependencias del sistema
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg curl && \
+    apt-get install -y --no-install-recommends ffmpeg curl nodejs && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
