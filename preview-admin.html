@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #f4f5f7;
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      color: #1e2329;
+      overflow-x: hidden;
+    }
+
+    #waveCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.52);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    }
+
+    .glass-sidebar {
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border-right: 1px solid rgba(255, 255, 255, 0.8);
+      width: 250px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .logo-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      margin-bottom: 20px;
+    }
+
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: #111;
+      color: #fff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .logo-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      color: #7d8590;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #9aa2ab;
+      padding: 10px 12px 6px;
+      font-weight: 600;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #444d56;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 4px;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.7);
+      color: #000;
+    }
+
+    .nav-btn.active {
+      background: #111;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .main-wrap {
+      flex: 1;
+      padding: 30px;
+      position: relative;
+      z-index: 2;
+      overflow-y: auto;
+    }
+
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .page-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+    }
+
+    .live-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 50px;
+      background: rgba(0,0,0,0.06);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #111;
+      animation: pulse 1.6s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(1.3); }
+    }
+
+    /* STATS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      padding: 18px 20px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6a737d;
+      margin-bottom: 6px;
+    }
+
+    .stat-val {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 30px;
+      font-weight: 700;
+      color: #111;
+    }
+
+    .stat-extra {
+      font-size: 12px;
+      color: #8c959f;
+      margin-top: 4px;
+    }
+
+    /* MINI PLAYER */
+    .now-playing-panel {
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .freq-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 32px;
+    }
+
+    .fb {
+      width: 4px;
+      background: #111;
+      border-radius: 2px;
+      animation: freqAnim var(--spd) infinite alternate ease-in-out;
+    }
+
+    @keyframes freqAnim {
+      0% { height: 6px; }
+      100% { height: var(--h); }
+    }
+
+    .track-details { flex: 1; }
+    .track-title { font-weight: 700; font-size: 16px; }
+    .track-sub { font-size: 13px; color: #666; }
+
+    .btn-action {
+      border: none;
+      background: rgba(0,0,0,0.06);
+      color: #111;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      background: #111;
+      color: #fff;
+    }
+
+    /* GRID SECTIONS */
+    .panels-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 20px;
+    }
+
+    .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 18px 22px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .queue-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .queue-table th {
+      text-align: left;
+      padding: 12px 20px;
+      color: #8c959f;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+
+    .queue-table td {
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(0,0,0,0.03);
+    }
+
+    .user-tag {
+      background: rgba(0,0,0,0.05);
+      padding: 2px 8px;
+      border-radius: 50px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    /* API PROVIDERS LIST */
+    .provider-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .prov-info { display: flex; align-items: center; gap: 10px; }
+    .prov-status {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 50px;
+      background: #e6ffed;
+      color: #1a7f37;
+    }
+    .prov-backup {
+      background: #f6f8fa;
+      color: #57606a;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="waveCanvas"></canvas>
+
+  <aside class="glass-sidebar">
+    <div class="logo-box">
+      <div class="logo-icon">🎚️</div>
+      <div>
+        <div class="logo-title">RADIO FM</div>
+        <div class="logo-sub">ADMIN GLASS</div>
+      </div>
+    </div>
+
+    <div class="nav-label">General</div>
+    <div class="nav-btn active">📊 Resumen</div>
+    <div class="nav-btn">📋 Cola & Turnos</div>
+    <div class="nav-btn">🎙️ Locutor IA</div>
+
+    <div class="nav-label">Configuración</div>
+    <div class="nav-btn">🧠 Proveedores FreeLLM</div>
+    <div class="nav-btn">📱 Bot Telegram</div>
+    <div class="nav-btn">⚙️ Preferencias</div>
+  </aside>
+
+  <main class="main-wrap">
+    <div class="top-header">
+      <div>
+        <div class="page-title">Panel de Control</div>
+        <div style="font-size: 13px; color: #768390;">Sistema automatizado de transmisión y gestión de pedidos</div>
+      </div>
+      <div class="live-chip">
+        <div class="dot"></div>
+        EMISIÓN ACTIVA
+      </div>
+    </div>
+
+    <!-- Mini player -->
+    <div class="now-playing-panel glass">
+      <div class="freq-bars">
+        <div class="fb" style="--spd:0.4s;--h:24px"></div>
+        <div class="fb" style="--spd:0.6s;--h:15px"></div>
+        <div class="fb" style="--spd:0.35s;--h:30px"></div>
+        <div class="fb" style="--spd:0.5s;--h:18px"></div>
+        <div class="fb" style="--spd:0.45s;--h:27px"></div>
+      </div>
+      <div class="track-details">
+        <div class="track-title">Bohemian Rhapsody — Queen</div>
+        <div class="track-sub">Solicitado por @Carlos_TG · Transmitiendo a 12 oyentes</div>
+      </div>
+      <button class="btn-action">⏭ Saltar Canción</button>
+      <button class="btn-action" style="background:#111; color:#fff;">🗣️ Activar Locutor</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card glass">
+        <div class="stat-label">OYENTES EN VIVO</div>
+        <div class="stat-val">12</div>
+        <div class="stat-extra">↑ 3 en los últimos 20m</div>
+      </div>
+      <div class="stat-card glass">
+        <div class="stat-label">CANCIONES REPRODUCIDAS</div>
+        <div class="stat-val">47</div>
+        <div class="stat-extra">Turno actual #48</div>
+      </div>
+      <div class="stat-card glass">
+        <div class="stat-label">EN COLA DE ESPERA</div>
+        <div class="stat-val">4</div>
+        <div class="stat-extra">~16 min de música</div>
+      </div>
+      <div class="stat-card glass">
+        <div class="stat-label">API IA ACTIVA</div>
+        <div class="stat-val" style="font-size:22px; padding-top:4px;">Groq Llama</div>
+        <div class="stat-extra">Failover a Gemini listo</div>
+      </div>
+    </div>
+
+    <div class="panels-grid">
+      <!-- Queue -->
+      <div class="glass" style="overflow:hidden;">
+        <div class="card-title">
+          <span>Cola de Pedidos por Turnos</span>
+          <span style="font-size:12px; color:#888;">Orden FIFO</span>
+        </div>
+        <table class="queue-table">
+          <thead>
+            <tr>
+              <th>TURNO</th>
+              <th>CANCION / ARTISTA</th>
+              <th>SOLICITANTE</th>
+              <th>ACCION</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>#1</strong></td>
+              <td>Hotel California — Eagles</td>
+              <td><span class="user-tag">@Maria_99</span></td>
+              <td><button class="btn-action" style="padding:4px 10px; font-size:11px;">Mover</button></td>
+            </tr>
+            <tr>
+              <td><strong>#2</strong></td>
+              <td>Billie Jean — Michael Jackson</td>
+              <td><span class="user-tag">@Pedro_Music</span></td>
+              <td><button class="btn-action" style="padding:4px 10px; font-size:11px;">Mover</button></td>
+            </tr>
+            <tr>
+              <td><strong>#3</strong></td>
+              <td>Smells Like Teen Spirit — Nirvana</td>
+              <td><span class="user-tag">@Ana_Rock</span></td>
+              <td><button class="btn-action" style="padding:4px 10px; font-size:11px;">Mover</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- APIs FreeLLM -->
+      <div class="glass" style="overflow:hidden;">
+        <div class="card-title">
+          <span>APIs de IA (Estilo FreeLLM)</span>
+          <button class="btn-action" style="padding:4px 10px; font-size:11px;">+ Agregar</button>
+        </div>
+        <div class="provider-row">
+          <div class="prov-info">
+            <div>⚡</div>
+            <div>
+              <div style="font-weight:600; font-size:13px;">Groq (Llama 3.3)</div>
+              <div style="font-size:11px; color:#888;">Prioridad 1 · Principal</div>
+            </div>
+          </div>
+          <span class="prov-status">ACTIVO</span>
+        </div>
+        <div class="provider-row">
+          <div class="prov-info">
+            <div>✨</div>
+            <div>
+              <div style="font-weight:600; font-size:13px;">Google AI Studio (Gemini)</div>
+              <div style="font-size:11px; color:#888;">Prioridad 2 · Respaldo</div>
+            </div>
+          </div>
+          <span class="prov-status prov-backup">RESERVA</span>
+        </div>
+        <div class="provider-row">
+          <div class="prov-info">
+            <div>🧠</div>
+            <div>
+              <div style="font-weight:600; font-size:13px;">Cerebras / OpenRouter</div>
+              <div style="font-size:11px; color:#888;">Prioridad 3 · Inactivo</div>
+            </div>
+          </div>
+          <span class="prov-status prov-backup" style="opacity:0.6;">PAUSADO</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('waveCanvas');
+    const ctx = canvas.getContext('2d');
+    let w, h, t = 0;
+
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function loop() {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#f4f5f7';
+      ctx.fillRect(0, 0, w, h);
+
+      for (let i = 0; i < 4; i++) {
+        const yBase = h * 0.35 + (i * 90);
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        ctx.lineTo(0, yBase);
+
+        for (let x = 0; x <= w; x += 3) {
+          const y = yBase + Math.sin(x * 0.0025 + t * 0.01 + i) * (20 + i * 8) + Math.cos(x * 0.005 - t * 0.008) * 10;
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(w, h);
+        ctx.closePath();
+
+        ctx.fillStyle = (i % 2 === 0) ? 'rgba(15, 23, 42, 0.025)' : 'rgba(255, 255, 255, 0.4)';
+        ctx.fill();
+      }
+
+      t++;
+      requestAnimationFrame(loop);
+    }
+    loop();
+  </script>
+</body>
+</html>

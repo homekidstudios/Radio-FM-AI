@@ -1,0 +1,21 @@
+# Python & Entorno virtual
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Archivos de configuración con secretos
+.env
+
+# Archivos multimedia temporales (no subir canciones descargadas a GitHub)
+media/music/*
+!media/music/.gitkeep
+media/tts/*
+!media/tts/.gitkeep
+
+# Base de datos local
+data/*.db
+data/*.sqlite3
+
+# Logs
+*.log

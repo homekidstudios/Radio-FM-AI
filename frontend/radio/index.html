@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radio FM Glass — Emisión en Vivo con IA</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Fondo animado con ondas en canvas -->
+  <canvas id="waveBg"></canvas>
+  <div class="bg-overlay"></div>
+
+  <!-- Audio Element conectado al stream del backend -->
+  <audio id="radioAudio" preload="none"></audio>
+
+  <div class="container">
+
+    <!-- CABECERA DE LA ESTACION -->
+    <header class="header glass-strong">
+      <div class="logo-group">
+        <div class="logo-icon">📻</div>
+        <div class="logo-text">RADIO FM <span id="stationNameSuffix">GLASS</span></div>
+      </div>
+      <div class="subtitle" id="stationTagline">online station</div>
+      <div class="live-pill" id="livePill">
+        <span class="live-dot" id="liveDot"></span>
+        <span id="liveStatusText">EN VIVO</span>
+      </div>
+    </header>
+
+    <!-- BARRA DE INFORMACION EN TIEMPO REAL -->
+    <div class="listeners-bar">
+      <span>🎧 <strong id="listenerCount">1</strong> oyentes</span>
+      <span>🎵 <strong id="playedCount">0</strong> canciones hoy</span>
+      <span>⏱ <strong id="statusBadge">Transmisión 24/7</strong></span>
+    </div>
+
+    <!-- VISUALIZADOR DE FRECUENCIAS (ANIMADO) -->
+    <div class="wave-visualizer glass" id="waveVis">
+      <div class="wave-bars" id="waveBarsContainer"></div>
+    </div>
+
+    <!-- REPRODUCTOR PRINCIPAL -->
+    <section class="player-card glass-strong">
+      <div class="np-header">
+        <span class="np-label" id="streamModeBadge">▶ REPRODUCIENDO AHORA</span>
+        <span class="np-time-elapsed" id="timeDisplay">0:00</span>
+      </div>
+
+      <div class="np-song" id="songTitle">Esperando canciones...</div>
+      <div class="np-artist" id="songArtist">Pide una canción por Telegram para iniciar</div>
+      <div class="np-requester" id="songRequester" style="display:none;">
+        📱 Pedida por <span id="requesterUser">@Oyente</span>
+      </div>
+
+      <!-- Barra de progreso estimada -->
+      <div class="progress-wrap">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressBar"></div>
+        </div>
+      </div>
+
+      <!-- Controles del reproductor -->
+      <div class="controls">
+        <button class="ctrl-play" id="playBtn" onclick="togglePlay()" title="Reproducir / Silenciar">
+          <span id="playIcon">▶</span>
+        </button>
+      </div>
+
+      <!-- Control de Volumen -->
+      <div class="volume-row">
+        <span class="vol-icon" onclick="setVolume(0)">🔈</span>
+        <input type="range" class="vol-slider-input" id="volSlider" min="0" max="1" step="0.05" value="0.8" oninput="changeVolume(this.value)">
+        <span class="vol-icon" onclick="setVolume(1)">🔊</span>
+      </div>
+    </section>
+
+    <!-- TARJETA DEL LOCUTOR IA -->
+    <section class="ai-card glass" id="aiCard">
+      <div class="ai-header">
+        <div class="ai-avatar">🎙️</div>
+        <div class="ai-name" id="locutorNameDisplay">DJ Neon — Locutor IA</div>
+        <div class="ai-live-badge" id="aiSpeakingBadge" style="display:none;">AL AIRE</div>
+      </div>
+      <div class="ai-text" id="aiCommentaryText">
+        "¡Bienvenidos a Radio FM! Nuestro agente de voz entrará al aire al terminar cada canción para compartir historias curiosas y presentar a los oyentes. ¡Envía tu pedido por Telegram!"
+      </div>
+    </section>
+
+    <!-- COLA DE PEDIDOS Y TURNOS -->
+    <section class="queue-card glass-strong">
+      <div class="queue-header">
+        <div class="queue-title">Cola de Canciones & Turnos</div>
+        <div class="queue-count" id="queueCountBadge">0 en espera</div>
+      </div>
+      <div id="queueListContainer">
+        <div class="queue-empty-msg">No hay canciones en la lista. ¡Sé el primero en pedir una!</div>
+      </div>
+    </section>
+
+    <!-- SECCION PARA PEDIR VIA TELEGRAM -->
+    <section class="tg-card glass-strong">
+      <div class="tg-emoji">💬</div>
+      <div class="tg-title">¿Quieres escuchar tu música favorita?</div>
+      <div class="tg-desc">Háblale a nuestro Bot en Telegram. Él buscará tu tema y lo programará por turnos en la radio.</div>
+      <a href="https://t.me" target="_blank" id="tgLinkBtn" class="tg-btn">
+        📱 Pedir Canción por Telegram
+      </a>
+      <div class="tg-hint">El sistema rota turnos para que todos los oyentes disfruten de su música sin saturaciones.</div>
+    </section>
+
+    <!-- PIE DE PAGINA -->
+    <footer class="footer">
+      RADIO FM GLASS © 2026 · Emisora Autónoma Impulsada por IA · <a href="/admin" target="_blank" style="color:#888; text-decoration:none;">Panel Admin</a>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
