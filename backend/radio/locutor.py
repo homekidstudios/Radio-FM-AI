@@ -4,7 +4,7 @@ import random
 import time
 import httpx
 import edge_tts
-from backend.config import TTS_DIR
+from backend.config import TTS_DIR, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
 from backend.database import get_active_providers, get_all_settings, get_db
 
 FALLBACK_SCRIPTS = [
@@ -104,23 +104,63 @@ async def generate_commentary_script(finished_track: dict, next_track: dict = No
         fallback = f"¡Un saludo especial para {finished_track['requester_name']} que nos pidió '{title}'! " + fallback
     return fallback, provider_used
 
-async def synthesize_voice(text: str, voice: str = "es-ES-AlvaroNeural") -> str:
-    """Uses edge-tts with automatic gTTS fallback for 100% synthesis uptime."""
+async def synthesize_elevenlabs(text: str, voice_id: str, filepath: str) -> bool:
+    """Generates audio using ElevenLabs API."""
+    settings = await get_all_settings()
+    api_key = settings.get("elevenlabs_api_key", ELEVENLABS_API_KEY)
+    v_id = voice_id or settings.get("elevenlabs_voice_id", ELEVENLABS_VOICE_ID)
+
+    if not api_key:
+        return False
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{v_id}"
+    headers = {"xi-api-key": api_key, "Content-Type": "application/json"}
+    payload = {
+        "text": text,
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
+    }
+    async with httpx.AsyncClient(timeout=25.0) as client:
+        res = await client.post(url, headers=headers, json=payload)
+        if res.status_code == 200:
+            with open(filepath, "wb") as f:
+                f.write(res.content)
+            return True
+        else:
+            print(f"⚠️ ElevenLabs error {res.status_code}: {res.text}")
+            return False
+
+async def synthesize_voice(text: str, voice: str = "elevenlabs:IKne3meq5aSn9XLyUdCD") -> str:
+    """Uses ElevenLabs as primary ultra-realistic voice with automatic Edge-TTS / gTTS fallbacks."""
     filename = f"locutor_{int(time.time())}_{random.randint(100, 999)}.mp3"
     filepath = str(TTS_DIR / filename)
 
+    # 1. Try ElevenLabs
+    if voice.startswith("elevenlabs:") or (ELEVENLABS_API_KEY and not voice.startswith("edge:")):
+        voice_id = voice.split(":")[-1] if ":" in voice else ELEVENLABS_VOICE_ID
+        try:
+            ok = await synthesize_elevenlabs(text, voice_id, filepath)
+            if ok:
+                return filepath
+        except Exception as e:
+            print(f"⚠️ Error en ElevenLabs ({e}), saltando a Edge-TTS...")
+
+    # 2. Try Edge-TTS (Fallback)
+    edge_voice = "es-ES-AlvaroNeural" if not voice.startswith("edge:") else voice.split(":")[-1]
     try:
-        communicate = edge_tts.Communicate(text, voice)
+        communicate = edge_tts.Communicate(text, edge_voice)
         await communicate.save(filepath)
         return filepath
     except Exception as e:
         print(f"⚠️ Edge-TTS falló ({e}), utilizando gTTS de respaldo...")
-        from gtts import gTTS
-        def _gtts_run():
-            tts = gTTS(text=text, lang="es", slow=False)
-            tts.save(filepath)
-        await asyncio.to_thread(_gtts_run)
-        return filepath
+
+    # 3. Try gTTS (Final fallback)
+    from gtts import gTTS
+    def _gtts_run():
+        tts = gTTS(text=text, lang="es", slow=False)
+        tts.save(filepath)
+    await asyncio.to_thread(_gtts_run)
+    return filepath
 
 async def produce_locutor_intervention(finished_track: dict, next_track: dict = None) -> dict:
     """Full pipeline: generates script + converts to voice mp3 + logs to DB"""

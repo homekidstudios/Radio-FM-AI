@@ -135,13 +135,20 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Voz Text-to-Speech (Edge-TTS)</label>
+            <label class="form-label">Voz Text-to-Speech (ElevenLabs IA / Edge-TTS)</label>
             <select id="cfgLocutorVoice" class="glass-select">
-              <option value="es-ES-AlvaroNeural">es-ES-AlvaroNeural (Masculina - España)</option>
-              <option value="es-MX-DaliaNeural">es-MX-DaliaNeural (Femenina - México)</option>
-              <option value="es-AR-ElenaNeural">es-AR-ElenaNeural (Femenina - Argentina)</option>
-              <option value="es-CO-GonzaloNeural">es-CO-GonzaloNeural (Masculina - Colombia)</option>
-              <option value="es-US-AlonsoNeural">es-US-AlonsoNeural (Masculina - Latino)</option>
+              <optgroup label="🌟 ElevenLabs (Ultra Realista)">
+                <option value="elevenlabs:IKne3meq5aSn9XLyUdCD" selected>Charlie (Deep & Energetic - Locutor Radio)</option>
+                <option value="elevenlabs:CwhRBWXzGAHq8TQ4Fs17">Roger (Casual & Resonante)</option>
+                <option value="elevenlabs:JBFqnCBsd6RMkjVDRZzb">George (Cálido & Cautivador)</option>
+                <option value="elevenlabs:EXAVITQu4vr4xnSDxMaL">Sarah (Segura & Clara)</option>
+              </optgroup>
+              <optgroup label="⚡ Edge-TTS (Respaldo Ilimitado)">
+                <option value="edge:es-ES-AlvaroNeural">Álvaro (España)</option>
+                <option value="edge:es-MX-DaliaNeural">Dalia (México)</option>
+                <option value="edge:es-AR-ElenaNeural">Elena (Argentina)</option>
+                <option value="edge:es-CO-GonzaloNeural">Gonzalo (Colombia)</option>
+              </optgroup>
             </select>
           </div>
         </div>

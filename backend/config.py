@@ -27,6 +27,10 @@ HOST = os.getenv("HOST", "0.0.0.0")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 ADMIN_USER_ID = os.getenv("ADMIN_USER_ID", "")
 
+# ElevenLabs Voice
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "IKne3meq5aSn9XLyUdCD")
+
 # Radio Branding
 STATION_NAME = os.getenv("STATION_NAME", "Radio FM")
 STATION_TAGLINE = os.getenv("STATION_TAGLINE", "Online Glass Station")
