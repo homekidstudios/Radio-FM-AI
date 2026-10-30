@@ -2,28 +2,42 @@ import asyncio
 import os
 import re
 import yt_dlp
-from backend.config import MUSIC_DIR
+from backend.config import MUSIC_DIR, BASE_DIR
 
 def sanitize_filename(name: str) -> str:
     return re.sub(r'[\\/*?:"<>|]', "", name).strip()
 
+def get_base_ydl_opts():
+    opts = {
+        'noplaylist': True,
+        'quiet': True,
+        'no_warnings': True,
+        'match_filter': yt_dlp.utils.match_filter_func("!is_live & duration < 900"),
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'mweb', 'web']
+            }
+        }
+    }
+    cookie_file = BASE_DIR / "cookies.txt"
+    if cookie_file.exists():
+        opts['cookiefile'] = str(cookie_file)
+    return opts
+
 def _extract_and_download_sync(query: str, track_id: int):
     out_tmpl = str(MUSIC_DIR / f"{track_id}_%(id)s.%(ext)s")
     
-    ydl_opts = {
+    ydl_opts = get_base_ydl_opts()
+    ydl_opts.update({
         'format': 'bestaudio/best',
         'default_search': 'ytsearch1',
-        'noplaylist': True,
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
         'outtmpl': out_tmpl,
-        'quiet': True,
-        'no_warnings': True,
-        'match_filter': yt_dlp.utils.match_filter_func("!is_live & duration < 900"), # Max 15 mins, no livestreams
-    }
+    })
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         # Search or direct URL
@@ -55,13 +69,11 @@ async def search_and_download(query: str, track_id: int):
 
 def _quick_search_sync(query: str):
     """Performs quick metadata search without downloading"""
-    ydl_opts = {
+    ydl_opts = get_base_ydl_opts()
+    ydl_opts.update({
         'default_search': 'ytsearch1',
-        'noplaylist': True,
-        'quiet': True,
         'skip_download': True,
-        'match_filter': yt_dlp.utils.match_filter_func("!is_live & duration < 900"),
-    }
+    })
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(query, download=False)
         if 'entries' in info and info['entries']:
