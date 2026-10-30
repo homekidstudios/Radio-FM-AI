@@ -14,6 +14,8 @@ def get_base_ydl_opts():
         'quiet': True,
         'no_warnings': True,
         'match_filter': yt_dlp.utils.match_filter_func("!is_live & duration < 900"),
+        'js_runtimes': {'node': {}},
+        'remote_components': ['ejs:github'],
     }
     
     # 1. Verificar cookies en diferentes ubicaciones
@@ -35,14 +37,8 @@ def get_base_ydl_opts():
 
     if found_cookie:
         opts['cookiefile'] = str(found_cookie)
-        # Con cookies de sesión web, permitir web y clientes compatibles
-        opts['extractor_args'] = {
-            'youtube': {
-                'player_client': ['web', 'tv_embedded', 'android']
-            }
-        }
     else:
-        # Sin cookies, intentar clientes móviles
+        # Sin cookies, intentar clientes móviles como fallback
         opts['extractor_args'] = {
             'youtube': {
                 'player_client': ['android', 'ios', 'tv_embedded']
