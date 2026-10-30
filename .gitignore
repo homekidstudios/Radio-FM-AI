@@ -19,3 +19,6 @@ data/*.sqlite3
 
 # Logs
 *.log
+data/providers.json
+cloudflared
+*.log

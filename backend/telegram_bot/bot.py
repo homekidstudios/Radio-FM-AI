@@ -1,5 +1,8 @@
 import asyncio
 import logging
+import os
+import tempfile
+import httpx
 from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -7,7 +10,7 @@ from telegram.ext import (
 from backend.config import TELEGRAM_BOT_TOKEN, ADMIN_USER_ID
 from backend.database import (
     add_to_queue, count_user_active_requests, get_pending_queue, 
-    get_current_playing, get_setting, delete_queue_item
+    get_current_playing, get_setting, delete_queue_item, get_active_providers
 )
 from backend.radio.player_engine import radio_engine
 from backend.radio.downloader import quick_search
@@ -25,8 +28,10 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👋 ¡Hola {user}! Bienvenido a la cabina de **Radio FM** 📻✨\n\n"
         "Aquí puedes pedir tu música favorita para que suene al aire en la radio web.\n\n"
         "📌 **¿Cómo pedir una canción?**\n"
-        "Solo escribe el nombre de la canción y el artista (o envía un enlace de YouTube).\n"
-        "Ejemplo: `Queen Bohemian Rhapsody`\n\n"
+        "• Escribe el nombre de la canción y el artista.\n"
+        "  Ejemplo: `Queen Bohemian Rhapsody`\n"
+        "• Pega un enlace de YouTube.\n"
+        "• 🎙️ **¡Envía una nota de voz!** Di o tararea la canción y la IA la identificará.\n\n"
         "📋 **Comandos útiles:**\n"
         "• `/cola` — Ver canciones en espera y turnos\n"
         "• `/mipedido` — Estado de tu turno actual\n"
@@ -175,6 +180,169 @@ async def limpiar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await delete_queue_item(item["id"])
     await update.message.reply_text(f"🗑️ Se han eliminado {len(pending)} canciones de la cola.")
 
+# ==========================================
+# VOICE MESSAGE HANDLER (Notas de Voz)
+# ==========================================
+
+async def _transcribe_audio_groq(audio_path: str) -> str:
+    """Transcribes audio to text using Groq Whisper (free & fast)."""
+    providers = await get_active_providers()
+    groq_key = None
+    for p in providers:
+        if p["provider_type"] == "groq":
+            groq_key = p["api_key"]
+            break
+    if not groq_key:
+        groq_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_key:
+        return ""
+
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        with open(audio_path, "rb") as f:
+            res = await client.post(
+                url,
+                headers={"Authorization": f"Bearer {groq_key}"},
+                files={"file": ("audio.ogg", f, "audio/ogg")},
+                data={"model": "whisper-large-v3-turbo", "language": "es"}
+            )
+        res.raise_for_status()
+        return res.json().get("text", "").strip()
+
+async def _ai_identify_song(description: str) -> str:
+    """Uses AI to identify a song from a vague description or humming transcript."""
+    providers = await get_active_providers()
+    groq_key = None
+    for p in providers:
+        if p["provider_type"] == "groq":
+            groq_key = p["api_key"]
+            break
+    if not groq_key:
+        groq_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_key:
+        return description
+
+    prompt = (
+        f"El usuario describió o tarareó una canción así: \"{description}\"\n"
+        "Identifica la canción más probable. Responde SOLO con: Artista - Título\n"
+        "Si no puedes identificarla, responde exactamente el texto original del usuario."
+    )
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        res = await client.post(
+            url,
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+            json={
+                "model": "qwen/qwen3.8-27b",
+                "messages": [
+                    {"role": "system", "content": "Eres un experto en música. Identifica canciones a partir de descripciones vagas, letras parciales o tarareos. Responde SOLO con: Artista - Título"},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.1,
+                "max_tokens": 60
+            }
+        )
+        res.raise_for_status()
+        result = res.json()["choices"][0]["message"]["content"].strip()
+        # Limpiar marcadores de pensamiento si los hay
+        if "</think>" in result:
+            result = result.split("</think>")[-1].strip()
+        return result if result else description
+
+async def handle_voice_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles voice messages: transcribes audio and searches for the song."""
+    voice = update.message.voice or update.message.audio
+    if not voice:
+        return
+
+    chat_id = str(update.effective_chat.id)
+    user = update.effective_user
+    username = user.username or ""
+    display_name = user.first_name or "Oyente"
+
+    # Anti-Flood check
+    turn_active = await get_setting("turn_system_active", "true") == "true"
+    max_per_user = int(await get_setting("max_queue_per_user", "1"))
+    if turn_active:
+        active_count = await count_user_active_requests(chat_id)
+        if active_count >= max_per_user:
+            await update.message.reply_text(
+                "⏳ **Ya tienes un turno activo en la cola.**\n"
+                "Espera a que termine tu tema actual antes de pedir otro. 🙌",
+                parse_mode="Markdown"
+            )
+            return
+
+    status_msg = await update.message.reply_text("🎙️ Escuchando tu audio... un momento.")
+
+    try:
+        # Download the voice file from Telegram
+        file = await voice.get_file()
+        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as tmp:
+            tmp_path = tmp.name
+        await file.download_to_drive(tmp_path)
+
+        # Transcribe with Groq Whisper
+        transcript = await _transcribe_audio_groq(tmp_path)
+
+        # Clean up temp file
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+        if not transcript:
+            await status_msg.edit_text(
+                "❌ No pude entender el audio. Intenta hablar más claro o escribe el nombre de la canción."
+            )
+            return
+
+        await status_msg.edit_text(
+            f"🎙️ Escuché: *\"{transcript}\"*\n🔍 Buscando la canción...",
+            parse_mode="Markdown"
+        )
+
+        # Use AI to identify the song if the transcript seems like humming or vague
+        search_query = await _ai_identify_song(transcript)
+
+        # Search and enqueue
+        info = await quick_search(search_query)
+        title = info["title"]
+        artist = info["artist"]
+        url = info["url"]
+
+        track_id = await add_to_queue(
+            title=title,
+            artist=artist,
+            youtube_url=url,
+            requester_username=username,
+            requester_name=display_name,
+            requester_chat_id=chat_id
+        )
+
+        pending = await get_pending_queue()
+        position = len(pending)
+
+        await status_msg.edit_text(
+            f"✅ **¡Canción identificada y agregada!**\n\n"
+            f"🎙️ Escuché: *\"{transcript}\"*\n"
+            f"🎵 **{title}**\n"
+            f"🎤 {artist}\n"
+            f"📋 **Turno:** #{position} en la cola\n\n"
+            f"📻 ¡El locutor IA anunciará tu tema cuando llegue el turno!",
+            parse_mode="Markdown"
+        )
+
+    except Exception as e:
+        logger.error(f"Error procesando nota de voz: {e}")
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+        await status_msg.edit_text(
+            "❌ No pude procesar tu audio. Intenta enviarlo de nuevo o escribe el nombre de la canción."
+        )
+
 def setup_bot_application() -> Application | None:
     if not TELEGRAM_BOT_TOKEN:
         print("ℹ️ Telegram Bot Token no configurado aún. El bot se iniciará cuando se ingrese en el .env o Panel Admin.")
@@ -188,6 +356,7 @@ def setup_bot_application() -> Application | None:
     app.add_handler(CommandHandler("saltar", saltar_cmd))
     app.add_handler(CommandHandler("limpiar", limpiar_cmd))
     app.add_handler(CommandHandler("pedir", handle_song_request))
+    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice_message))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_song_request))
 
     return app

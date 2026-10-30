@@ -100,8 +100,8 @@ async def init_db():
 
         # Check environment variables for automatic cloud persistence
         env_mappings = [
-            ("GROQ_API_KEY", "Groq Llama 3.3", "groq", "llama-3.3-70b-versatile", 1, "https://api.groq.com/openai/v1"),
-            ("GEMINI_API_KEY", "Google Gemini Flash", "gemini", "gemini-2.0-flash", 2, ""),
+            ("GROQ_API_KEY", "Groq Qwen 27B", "groq", "qwen/qwen3.8-27b", 1, "https://api.groq.com/openai/v1"),
+            ("GEMINI_API_KEY", "Google Gemini Flash", "gemini", "gemini-3.8-flash", 2, ""),
             ("CEREBRAS_API_KEY", "Cerebras AI", "cerebras", "llama-3.3-70b", 3, "https://api.cerebras.ai/v1"),
             ("OPENROUTER_API_KEY", "OpenRouter Free", "openrouter", "meta-llama/llama-3.3-70b-instruct:free", 4, "https://openrouter.ai/api/v1")
         ]

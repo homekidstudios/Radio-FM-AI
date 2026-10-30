@@ -37,7 +37,7 @@ async def call_groq_or_openai_compatible(api_key: str, model_name: str, prompt: 
 
 async def call_gemini(api_key: str, model_name: str, prompt: str):
     # Google AI Studio Gemini generateContent API
-    model = model_name if model_name else "gemini-2.0-flash"
+    model = model_name if model_name else "gemini-3.8-flash"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     payload = {
         "contents": [{
@@ -85,10 +85,10 @@ async def generate_commentary_script(finished_track: dict, next_track: dict = No
             base_url = prov.get("base_url")
 
             if p_type == "groq":
-                text = await call_groq_or_openai_compatible(key, model or "llama-3.3-70b-versatile", user_prompt, base_url or "https://api.groq.com/openai/v1")
+                text = await call_groq_or_openai_compatible(key, model or "qwen/qwen3.8-27b", user_prompt, base_url or "https://api.groq.com/openai/v1")
                 return text, f"Groq ({model})"
             elif p_type == "gemini":
-                text = await call_gemini(key, model or "gemini-2.0-flash", user_prompt)
+                text = await call_gemini(key, model or "gemini-3.8-flash", user_prompt)
                 return text, f"Gemini ({model})"
             elif p_type in ("cerebras", "openrouter", "custom"):
                 default_url = "https://api.cerebras.ai/v1" if p_type == "cerebras" else "https://openrouter.ai/api/v1"
