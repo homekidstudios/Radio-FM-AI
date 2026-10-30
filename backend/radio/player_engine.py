@@ -15,6 +15,8 @@ class BroadcastStream:
     """Manages audio streaming to multiple web clients simultaneously."""
     def __init__(self):
         self.listeners: Set[asyncio.Queue] = set()
+        self.ring_buffer = bytearray()
+        self.max_ring_buffer = 140000 # ~6 segundos de buffer instantáneo para arranque inmediato
         self.current_state = {
             "status": "idle", # "playing_music", "locutor_speaking", "idle"
             "track": None,
@@ -24,7 +26,13 @@ class BroadcastStream:
         }
 
     def add_listener(self) -> asyncio.Queue:
-        q = asyncio.Queue(maxsize=100)
+        q = asyncio.Queue(maxsize=150)
+        # Enviar ráfaga inicial para llenar el buffer del navegador y Cloudflare al instante
+        if self.ring_buffer:
+            try:
+                q.put_nowait(bytes(self.ring_buffer))
+            except Exception:
+                pass
         self.listeners.add(q)
         return q
 
@@ -32,8 +40,13 @@ class BroadcastStream:
         self.listeners.discard(q)
 
     async def broadcast_chunk(self, chunk: bytes):
+        if chunk:
+            self.ring_buffer.extend(chunk)
+            if len(self.ring_buffer) > self.max_ring_buffer:
+                self.ring_buffer = self.ring_buffer[-self.max_ring_buffer:]
+
         disconnected = []
-        for q in self.listeners:
+        for q in list(self.listeners):
             try:
                 if q.full():
                     try:
@@ -132,7 +145,12 @@ class RadioEngine:
                     "duration": 0
                 }
                 await self.notify_clients()
-                await asyncio.sleep(3)
+                # Transmitir audio de espera para mantener la conexión viva 24/7 sin cortes
+                silence_file = STATION_DIR / "silence.mp3"
+                if silence_file.exists():
+                    await self.stream_audio_file(str(silence_file))
+                else:
+                    await asyncio.sleep(2)
                 continue
 
             next_item = queue[0]

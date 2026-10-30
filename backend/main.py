@@ -108,10 +108,12 @@ async def audio_stream():
         stream_generator(),
         media_type="audio/mpeg",
         headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Cache-Control": "no-cache, no-store, must-revalidate, no-transform",
             "Pragma": "no-cache",
             "Expires": "0",
-            "X-Content-Type-Options": "nosniff"
+            "X-Content-Type-Options": "nosniff",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive"
         }
     )
 

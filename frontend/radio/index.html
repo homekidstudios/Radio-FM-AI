@@ -62,20 +62,24 @@
         </div>
       </div>
 
-      <!-- Controles del reproductor -->
-      <div class="controls">
-        <button class="ctrl-play" id="playBtn" onclick="togglePlay()" title="Reproducir / Silenciar">
-          <span id="playIcon">▶</span>
-        </button>
+      <!-- Emisión en Vivo Continua (Sin botón de pausa) -->
+      <div class="live-signal-badge">
+        <span class="live-signal-dot"></span>
+        <span class="live-signal-title">TRANSMISIÓN EN VIVO CONTINUA</span>
       </div>
 
-      <!-- Control de Volumen -->
+      <!-- Control de Volumen (Ajuste del oyente) -->
       <div class="volume-row">
-        <span class="vol-icon" onclick="setVolume(0)">🔈</span>
+        <span class="vol-icon" onclick="setVolume(0)" title="Silenciar">🔈</span>
         <input type="range" class="vol-slider-input" id="volSlider" min="0" max="1" step="0.05" value="0.8" oninput="changeVolume(this.value)">
-        <span class="vol-icon" onclick="setVolume(1)">🔊</span>
+        <span class="vol-icon" onclick="setVolume(1)" title="Volumen Máximo">🔊</span>
       </div>
     </section>
+
+    <!-- Banner flotante si el navegador bloquea autoplay en el primer ingreso -->
+    <div id="tapToListen" class="tap-banner" onclick="startAudioImmediate()" style="display:none;">
+      <span>🔊 Toca en cualquier parte para sintonizar en vivo</span>
+    </div>
 
     <!-- TARJETA DEL LOCUTOR IA -->
     <section class="ai-card glass" id="aiCard">

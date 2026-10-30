@@ -335,6 +335,51 @@ function escapeHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// ====== ADMIN AUDIO MONITOR EN VIVO ======
+const adminAudio = document.getElementById('adminAudioMonitor');
+let adminAudioStarted = false;
+
+function startAdminMonitor() {
+  if (!adminAudio || adminAudioStarted) return;
+  adminAudio.volume = parseFloat(document.getElementById('adminVolSlider')?.value || 0.7);
+  adminAudio.src = '/api/stream?t=' + Date.now();
+  const p = adminAudio.play();
+  if (p !== undefined) {
+    p.then(() => {
+      adminAudioStarted = true;
+    }).catch(() => {});
+  }
+}
+
+function setAdminVolume(val) {
+  if (adminAudio) {
+    adminAudio.volume = parseFloat(val);
+  }
+}
+
+async function emergencyStopTrack() {
+  if (!confirm("⚠️ ¿Deseas QUITAR y detener inmediatamente la canción actual?")) return;
+  try {
+    const res = await fetch('/api/queue/skip', { method: 'POST' });
+    const data = await res.json();
+    alert("🛑 Canción detenida y retirada de la emisión.");
+    loadStats();
+    loadQueue();
+  } catch (e) {
+    alert("Error: " + e);
+  }
+}
+
+// Iniciar monitor automáticamente al cargar o al interactuar
+window.addEventListener('DOMContentLoaded', startAdminMonitor);
+['click', 'touchstart', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, () => {
+    if (adminAudio && adminAudio.paused) {
+      startAdminMonitor();
+    }
+  }, { passive: true });
+});
+
 // Initial load
 loadStats();
 setInterval(loadStats, 5000);

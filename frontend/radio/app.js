@@ -66,38 +66,77 @@ for (let i = 0; i < 50; i++) {
   waveBarsContainer.appendChild(bar);
 }
 
-// ====== AUDIO PLAYBACK & STREAMING ======
+// ====== AUDIO PLAYBACK CONTINUO (SIN PAUSA PARA OYENTES) ======
 const audio = document.getElementById('radioAudio');
-const playBtn = document.getElementById('playBtn');
-const playIcon = document.getElementById('playIcon');
-let isPlaying = false;
+let isAudioActive = false;
 
-function togglePlay() {
-  if (isPlaying) {
-    audio.pause();
-    audio.src = '';
-    isPlaying = false;
-    playIcon.textContent = '▶';
-  } else {
-    // Connect to live stream endpoint
+function startAudioImmediate() {
+  if (!audio) return;
+  audio.volume = parseFloat(document.getElementById('volSlider')?.value || 0.8);
+
+  if (!audio.src || audio.src === '' || audio.src.endsWith('/')) {
     audio.src = '/api/stream?t=' + Date.now();
-    audio.play().then(() => {
-      isPlaying = true;
-      playIcon.textContent = '⏸';
-    }).catch(err => {
-      console.warn("Autoplay bloqueado:", err);
-      isPlaying = false;
-      playIcon.textContent = '▶';
+  }
+
+  const p = audio.play();
+  if (p !== undefined) {
+    p.then(() => {
+      isAudioActive = true;
+      document.body.classList.add('audio-playing');
+      const banner = document.getElementById('tapToListen');
+      if (banner) banner.style.display = 'none';
+    }).catch(() => {
+      // Si el navegador bloquea autoplay en frío, mostrar aviso amigable
+      const banner = document.getElementById('tapToListen');
+      if (banner) banner.style.display = 'flex';
     });
   }
 }
 
+if (audio) {
+  audio.volume = 0.8;
+
+  audio.addEventListener('playing', () => {
+    isAudioActive = true;
+    document.body.classList.add('audio-playing');
+    const banner = document.getElementById('tapToListen');
+    if (banner) banner.style.display = 'none';
+  });
+
+  audio.addEventListener('error', (e) => {
+    console.warn("Reconectando audio stream...", e);
+    setTimeout(() => {
+      if (audio) {
+        audio.src = '/api/stream?t=' + Date.now();
+        audio.play().catch(() => {});
+      }
+    }, 2000);
+  });
+}
+
+// Activar audio automáticamente al cargar
+window.addEventListener('DOMContentLoaded', () => {
+  startAudioImmediate();
+});
+
+// Cualquier toque o interacción en la pantalla asegura que el audio empiece si el navegador lo retuvo
+['click', 'touchstart', 'scroll', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, () => {
+    if (audio && (audio.paused || !isAudioActive)) {
+      startAudioImmediate();
+    }
+  }, { passive: true });
+});
+
 function changeVolume(val) {
-  audio.volume = parseFloat(val);
+  if (audio) {
+    audio.volume = parseFloat(val);
+  }
 }
 
 function setVolume(val) {
-  document.getElementById('volSlider').value = val;
+  const slider = document.getElementById('volSlider');
+  if (slider) slider.value = val;
   changeVolume(val);
 }
 
